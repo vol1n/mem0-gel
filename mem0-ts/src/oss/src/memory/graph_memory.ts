@@ -12,6 +12,7 @@ import {
 } from "../graphs/tools";
 import { EXTRACT_RELATIONS_PROMPT, getDeleteMessages } from "../graphs/utils";
 import { logger } from "../utils/logger";
+import { GelMemoryGraph } from "./gel_graph_memory";
 
 interface SearchOutput {
   source: string;
@@ -57,6 +58,13 @@ export class MemoryGraph {
   private threshold: number;
 
   constructor(config: MemoryConfig) {
+    // Provider-based delegation - plug and play support
+    if (config.graphStore?.provider === "gel") {
+      // Delegate to GelMemoryGraph for EdgeDB-based graph storage
+      return new GelMemoryGraph(config) as any;
+    }
+    
+    // Default Neo4j implementation
     this.config = config;
     if (
       !config.graphStore?.config?.url ||

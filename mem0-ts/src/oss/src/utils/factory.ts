@@ -31,6 +31,7 @@ import { AzureOpenAIEmbedder } from "../embeddings/azure";
 import { LangchainLLM } from "../llms/langchain";
 import { LangchainEmbedder } from "../embeddings/langchain";
 import { LangchainVectorStore } from "../vector_stores/langchain";
+import { Gel } from "../vector_stores/gel";
 
 export class EmbedderFactory {
   static create(provider: string, config: EmbeddingConfig): Embedder {
@@ -93,6 +94,8 @@ export class VectorStoreFactory {
         return new LangchainVectorStore(config as any);
       case "vectorize":
         return new VectorizeDB(config as any);
+      case "gel":
+        return new Gel(config as any);
       default:
         throw new Error(`Unsupported vector store provider: ${provider}`);
     }

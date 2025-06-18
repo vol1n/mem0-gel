@@ -52,9 +52,23 @@ export interface Neo4jConfig {
   password: string;
 }
 
+export interface GelGraphConfig {
+  dimension: number;
+  client?: any; // GEL client type
+  dsn?: string;
+  host?: string;
+  port?: number;
+  database?: string;
+  user?: string;
+  password?: string;
+  tlsCaFile?: string;
+  tlsSecurity?: string;
+  collectionName?: string;
+}
+
 export interface GraphStoreConfig {
   provider: string;
-  config: Neo4jConfig;
+  config: Neo4jConfig | GelGraphConfig;
   llm?: LLMConfig;
   customPrompt?: string;
 }

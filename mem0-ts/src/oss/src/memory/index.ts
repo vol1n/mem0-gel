@@ -367,7 +367,9 @@ export class Memory {
           }
         }
       } catch (error) {
-        console.error(`Error processing memory action: ${error}`);
+        console.error(
+          `Error processing memory action (${action.event}): ${error}`,
+        );
       }
     }
 

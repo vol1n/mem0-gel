@@ -1,0 +1,87 @@
+using extension pgvector;
+
+module mem0 {
+    scalar type OpenAIEmbedding extending
+        ext::pgvector::vector<1536>;
+
+    abstract type MemoryImpl {
+        required mem0_id: str {
+            constraint exclusive;
+        }
+        required content: str;
+        required hash: str;
+        required embedding: OpenAIEmbedding;
+        required created_at: datetime {
+            default := datetime_current()
+        }
+        optional updated_at: datetime;
+        optional user_id: str;
+        optional agent_id: str;
+        optional run_id: str;
+        optional actor_id: str;
+        optional role: str;
+        optional memory_type: str;
+        optional metadata: json;
+
+        index ext::pgvector::hnsw_cosine
+              on (.embedding);
+    }
+
+    type Memory extending MemoryImpl;
+    
+    # Migration type for telemetry - only needs user_id like pgvector's memory_migrations table
+    type Migration {
+        required user_id: str {
+            constraint exclusive;
+        }
+        required created_at: datetime {
+            default := datetime_current()
+        }
+    }
+    
+    # Add TestMemories type for testing
+    type TestMemories extending MemoryImpl;
+    
+    # Graph memory types for GelMemoryGraph
+    abstract type GraphEntityImpl {
+        required name: str;
+        required entity_type: str;
+        required user_id: str;
+        required embedding: OpenAIEmbedding;
+        required created_at: datetime {
+            default := datetime_current()
+        }
+        optional updated_at: datetime;
+        
+        constraint exclusive on ((.name, .user_id));
+        
+        index ext::pgvector::hnsw_cosine
+              on (.embedding);
+    }
+    
+    abstract type GraphRelationImpl {
+        required relationship_type: str;
+        required created_at: datetime {
+            default := datetime_current()
+        }
+        optional updated_at: datetime;
+    }
+    
+    # Default graph types
+    type GraphEntity extending GraphEntityImpl;
+    type GraphRelation extending GraphRelationImpl {
+        required source: GraphEntity;
+        required target: GraphEntity;
+        
+        constraint exclusive on ((.source, .target, .relationship_type));
+    };
+    
+    # Test graph types
+    type TestMemoriesGraphEntity extending GraphEntityImpl;
+    type TestMemoriesGraphRelation extending GraphRelationImpl {
+        required source: TestMemoriesGraphEntity;
+        required target: TestMemoriesGraphEntity;
+        
+        constraint exclusive on ((.source, .target, .relationship_type));
+    };
+}
