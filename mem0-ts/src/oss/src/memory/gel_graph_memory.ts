@@ -190,7 +190,6 @@ export class GelMemoryGraph {
       const embeddingProp = entityType.properties.find(
         (p) => p.name === "embedding",
       );
-
     } catch (error: any) {
       if (error.message.includes("Graph schema error:")) {
         throw error;
@@ -251,7 +250,6 @@ export class GelMemoryGraph {
             `}`,
         );
       }
-
     } catch (error: any) {
       if (error.message.includes("Graph schema error:")) {
         throw error;
@@ -330,7 +328,6 @@ export class GelMemoryGraph {
   }
 
   async deleteAll(filters: Record<string, any>) {
-
     // First delete all relationships for this user
     const deleteRelationsQuery = `
       delete ${this.collectionName}GraphRelation
@@ -350,7 +347,6 @@ export class GelMemoryGraph {
     await this.client.query(deleteEntitiesQuery, {
       user_id: filters["userId"],
     });
-
   }
 
   async getAll(filters: Record<string, any>, limit = 100) {
@@ -501,7 +497,6 @@ export class GelMemoryGraph {
     const resultRelations: SearchOutput[] = [];
 
     for (const node of nodeList) {
-
       let nEmbedding: number[];
       try {
         // Add 30 second timeout for embedding requests
@@ -674,7 +669,6 @@ export class GelMemoryGraph {
       const { source, destination, relationship } = item;
       const sourceType = entityTypeMap[source] || "known";
       const destinationType = entityTypeMap[destination] || "unknown";
-
 
       let sourceEmbedding: number[];
       let destEmbedding: number[];

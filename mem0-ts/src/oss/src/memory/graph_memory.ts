@@ -63,7 +63,7 @@ export class MemoryGraph {
       // Delegate to GelMemoryGraph for EdgeDB-based graph storage
       return new GelMemoryGraph(config) as any;
     }
-    
+
     // Default Neo4j implementation
     this.config = config;
     if (
