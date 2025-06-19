@@ -19,6 +19,7 @@ export default defineConfig([
     dts: true,
     sourcemap: true,
     external,
+    tsconfig: "tsconfig.build.json",
   },
   {
     entry: ["src/oss/src/index.ts"],
