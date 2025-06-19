@@ -7,8 +7,12 @@
   "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "*": ["./dist/index.d.ts"],
-      "oss": ["./dist/oss/index.d.ts"]
+      "*": [
+        "./dist/index.d.ts"
+      ],
+      "oss": [
+        "./dist/oss/index.d.ts"
+      ]
     }
   },
   "exports": {
@@ -23,7 +27,9 @@
       "import": "./dist/oss/index.mjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "clean": "rimraf dist",
     "build": "npm run clean && npx prettier --check . && npx tsup",
@@ -37,8 +43,13 @@
     "format:check": "npm run clean && prettier --check ."
   },
   "tsup": {
-    "entry": ["src/index.ts"],
-    "format": ["cjs", "esm"],
+    "entry": [
+      "src/index.ts"
+    ],
+    "format": [
+      "cjs",
+      "esm"
+    ],
     "dts": {
       "resolve": true
     },
@@ -47,8 +58,12 @@
     "clean": true,
     "treeshake": true,
     "minify": false,
-    "external": ["@mem0/community"],
-    "noExternal": ["!src/community/**"]
+    "external": [
+      "@mem0/community"
+    ],
+    "noExternal": [
+      "!src/community/**"
+    ]
   },
   "keywords": [
     "mem0",
