@@ -3,8 +3,8 @@ name: Publish mem0-ts Package to GitHub Packages
 # Trigger on new semver tags (e.g. v1.2.3) or manually
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches:
+      - main
   workflow_dispatch: {}
 
 jobs:
