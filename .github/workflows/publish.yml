@@ -1,0 +1,38 @@
+name: Publish mem0-ts Package to GitHub Packages
+
+# Trigger on new semver tags (e.g. v1.2.3) or manually
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch: {}
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./mem0-ts
+    steps:
+      # 1. Checkout the repo
+      - uses: actions/checkout@v3
+
+      # 2. Setup Node & point npm to GitHub Packages registry
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          registry-url: 'https://npm.pkg.github.com/'
+          scope: '@your-github-org'
+
+      # 3. Install dependencies & build in mem0-ts
+      - run: npm ci
+      - run: npm run build
+
+      # 4. Authenticate to GitHub Packages
+      - run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+
+      # 5. Publish the package from mem0-ts
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
