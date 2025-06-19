@@ -31,4 +31,5 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
 
       # bump version before publishing, or ensure you've already incremented it
+      - run: npm search @vol1n --json
       - run: npm publish --access public
