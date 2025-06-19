@@ -27,5 +27,6 @@ export default defineConfig([
     dts: true,
     sourcemap: true,
     external,
+    tsconfig: "tsconfig.build.json",
   },
 ]);

@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": ["src/oss/src/llms/anthropic.ts"]
+}
