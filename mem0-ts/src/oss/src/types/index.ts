@@ -113,9 +113,15 @@ export interface SearchFilters {
   [key: string]: any;
 }
 
+export interface GraphRelation {
+  source: string;
+  relationship: string;
+  destination: string;
+}
+
 export interface SearchResult {
   results: MemoryItem[];
-  relations?: any[];
+  relations?: GraphRelation[];
 }
 
 export interface VectorStoreResult {

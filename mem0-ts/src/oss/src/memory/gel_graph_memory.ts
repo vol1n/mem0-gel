@@ -2,7 +2,7 @@ import { createClient } from "gel";
 import type { Client } from "gel";
 import { BM25 } from "../utils/bm25";
 import { GraphStoreConfig } from "../graphs/configs";
-import type { MemoryConfig, GelGraphConfig } from "../types";
+import type { MemoryConfig, GelGraphConfig, GraphRelation } from "../types";
 import { EmbedderFactory, LLMFactory } from "../utils/factory";
 import { Embedder } from "../embeddings/base";
 import { LLM } from "../llms/base";
@@ -301,7 +301,11 @@ export class GelMemoryGraph {
     };
   }
 
-  async search(query: string, filters: Record<string, any>, limit = 100) {
+  async search(
+    query: string,
+    filters: Record<string, any>,
+    limit = 100,
+  ): Promise<GraphRelation[]> {
     const entityTypeMap = await this._retrieveNodesFromData(query, filters);
     const searchOutput = await this._searchGraphDb(
       Object.keys(entityTypeMap),
