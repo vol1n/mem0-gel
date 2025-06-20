@@ -10,6 +10,7 @@ export interface MultiModalMessages {
 export interface Message {
   role: string;
   content: string | MultiModalMessages;
+  name?: string;
 }
 
 export interface EmbeddingConfig {

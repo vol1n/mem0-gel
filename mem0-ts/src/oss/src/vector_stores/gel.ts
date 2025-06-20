@@ -218,19 +218,38 @@ export class Gel implements VectorStore {
     }
 
     // Prepare data for bulk insert
-    const bulkData = vectors.map((vector, i) => ({
-      id: ids[i] || null,
-      content: payloads[i]?.data || "",
-      embedding: vector,
-      hash: payloads[i]?.hash || "",
-      user_id: payloads[i]?.userId || null,
-      agent_id: payloads[i]?.agentId || null,
-      run_id: payloads[i]?.runId || null,
-      actor_id: payloads[i]?.actorId || null,
-      role: payloads[i]?.role || null,
-      memory_type: payloads[i]?.memoryType || null,
-      metadata: payloads[i]?.metadata || null,
-    }));
+    const bulkData = vectors.map((vector, i) => {
+      const payload = payloads[i] || {};
+      // Extract known fields
+      const {
+        data,
+        hash,
+        userId,
+        agentId,
+        runId,
+        actorId,
+        role,
+        memoryType,
+        createdAt,
+        updatedAt,
+        ...otherMetadata
+      } = payload;
+
+      return {
+        id: ids[i] || null,
+        content: data || "",
+        embedding: vector,
+        hash: hash || "",
+        user_id: userId || null,
+        agent_id: agentId || null,
+        run_id: runId || null,
+        actor_id: actorId || null,
+        role: role || null,
+        memory_type: memoryType || null,
+        // Store all other fields (including isPrivate) as metadata
+        metadata: Object.keys(otherMetadata).length > 0 ? otherMetadata : null,
+      };
+    });
 
     // Bulk insert query
     const query = `

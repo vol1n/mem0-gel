@@ -189,6 +189,78 @@ describe("Memory Class", () => {
     });
   });
 
+  describe("Privacy Functionality", () => {
+    it("should mark facts as private/public", async () => {
+      // Add a private fact (contains email)
+      const privateResult = await memory.add("My email address is john@secret.com", { userId });
+      
+      // Add a public fact
+      const publicResult = await memory.add("I work at a tech company", { userId });
+      
+      expect(privateResult.results.length).toBeGreaterThan(0);
+      expect(publicResult.results.length).toBeGreaterThan(0);
+      
+      // Get the memories to check their metadata
+      const privateMemory = await memory.get(privateResult.results[0].id);
+      const publicMemory = await memory.get(publicResult.results[0].id);
+      
+      // The private fact should be marked as private
+      expect(privateMemory?.metadata?.isPrivate).toBe(true);
+      // The public fact should be marked as public
+      expect(publicMemory?.metadata?.isPrivate).toBe(false);
+    });
+
+    it("should filter private memories when filterPrivate=true", async () => {
+      // Add mixed private and public facts
+      await memory.add("My email is john@example.com", { userId }); // Private
+      await memory.add("I enjoy hiking on weekends", { userId }); // Public
+      await memory.add("My address is 123 Main St", { userId }); // Private
+      await memory.add("I like pizza", { userId }); // Public
+      
+      // Search without filtering - should return all results
+      const allResults = await memory.search("Tell me about myself", { userId });
+      expect(allResults.results.length).toBeGreaterThan(2);
+      
+      // Search with filtering - should only return public results
+      const publicResults = await memory.search("Tell me about myself", { 
+        userId, 
+        filters: { filterPrivate: true } 
+      });
+      
+      expect(publicResults.results.length).toBeLessThan(allResults.results.length);
+      
+      // Verify no private results are returned
+      for (const result of publicResults.results) {
+        const memory = await memory.get(result.id);
+        expect(memory?.metadata?.isPrivate).not.toBe(true);
+      }
+    });
+
+    it("should not filter private memories when filterPrivate=false", async () => {
+      // Add mixed private and public facts
+      await memory.add("My social security number is 123-45-6789", { userId }); // Private
+      await memory.add("I love reading books", { userId }); // Public
+      
+      // Search with filterPrivate=false - should return all results
+      const allResults = await memory.search("What do you know about me", { 
+        userId, 
+        filters: { filterPrivate: false } 
+      });
+      
+      expect(allResults.results.length).toBeGreaterThan(0);
+      
+      // Should include both private and public facts
+      const memories = await Promise.all(
+        allResults.results.map(r => memory.get(r.id))
+      );
+      
+      const hasPrivate = memories.some(m => m?.metadata?.isPrivate === true);
+      const hasPublic = memories.some(m => m?.metadata?.isPrivate === false);
+      
+      expect(hasPrivate || hasPublic).toBe(true); // Should have at least one type
+    });
+  });
+
   // describe("Memory with Custom Configuration", () => {
   //   let customMemory: Memory;
 

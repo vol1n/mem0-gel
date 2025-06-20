@@ -10,8 +10,9 @@ import {
   DELETE_MEMORY_TOOL_GRAPH,
   EXTRACT_ENTITIES_TOOL,
   RELATIONS_TOOL,
+  CLASSIFY_PRIVACY_TOOL,
 } from "../graphs/tools";
-import { EXTRACT_RELATIONS_PROMPT, getDeleteMessages } from "../graphs/utils";
+import { EXTRACT_RELATIONS_PROMPT, getDeleteMessages, IS_PRIVATE_PROMPT } from "../graphs/utils";
 import { logger } from "../utils/logger";
 
 interface SearchOutput {
@@ -307,7 +308,12 @@ export class GelMemoryGraph {
       return [];
     }
 
-    const searchOutputsSequence = searchOutput.map((item) => [
+    // Filter out private relations if filterPrivate is true (default false)
+    const filteredOutput = filters.filterPrivate === true 
+      ? searchOutput.filter(item => !item.metadata?.isPrivate)
+      : searchOutput;
+
+    const searchOutputsSequence = filteredOutput.map((item) => [
       item.source,
       item.relationship,
       item.destination,
@@ -356,6 +362,7 @@ export class GelMemoryGraph {
         entity_type,
         out_relations := .<source[is ${this.collectionName}GraphRelation] {
           relationship_type,
+          metadata,
           target: { name }
         }
       }
@@ -376,6 +383,11 @@ export class GelMemoryGraph {
 
     for (const entity of result as any[]) {
       for (const relation of entity.out_relations || []) {
+        // Filter out private relations if filterPrivate is true (default false)
+        if (filters.filterPrivate === true && relation.metadata?.isPrivate) {
+          continue;
+        }
+        
         finalResults.push({
           source: entity.name,
           relationship: relation.relationship_type,
@@ -485,8 +497,12 @@ export class GelMemoryGraph {
     }
 
     entities = this._removeSpacesFromEntities(entities);
-    logger.debug(`Extracted entities: ${JSON.stringify(entities)}`);
-    return entities;
+    
+    // Add privacy metadata to each relation using IS_PRIVATE_PROMPT
+    const entitiesWithPrivacy = await this._checkRelationsPrivacy(entities);
+    
+    logger.debug(`Extracted entities: ${JSON.stringify(entitiesWithPrivacy)}`);
+    return entitiesWithPrivacy;
   }
 
   private async _searchGraphDb(
@@ -666,7 +682,7 @@ export class GelMemoryGraph {
     const results: any[] = [];
 
     for (const item of toBeAdded) {
-      const { source, destination, relationship } = item;
+      const { source, destination, relationship, metadata } = item;
       const sourceType = entityTypeMap[source] || "known";
       const destinationType = entityTypeMap[destination] || "unknown";
 
@@ -779,6 +795,7 @@ export class GelMemoryGraph {
                 source := source_entity,
                 target := dest_entity,
                 relationship_type := <str>$relationship,
+                metadata := <optional json>$metadata,
                 created_at := datetime_current()
               })
               if not exists existing
@@ -801,6 +818,7 @@ export class GelMemoryGraph {
           dest_type: destinationType,
           dest_embedding: destEmbedding,
           relationship: relationship,
+          metadata: metadata,
           user_id: userId,
         });
         results.push(result);
@@ -810,6 +828,51 @@ export class GelMemoryGraph {
     }
 
     return results;
+  }
+
+  private async _checkRelationsPrivacy(entities: any[]): Promise<any[]> {
+    if (!entities.length) return entities;
+
+    try {
+      // Format entities for IS_PRIVATE_PROMPT
+      const relationObjects = entities.map(entity => ({
+        source: entity.source,
+        relation: entity.relationship,
+        target: entity.destination,
+      }));
+
+      const response = await this.structuredLlm.generateResponse(
+        [{ role: "user", content: `${IS_PRIVATE_PROMPT}\n\nRelations to classify: ${JSON.stringify(relationObjects)}` }],
+        { type: "json_object" },
+        [CLASSIFY_PRIVACY_TOOL]
+      );
+
+      let classifiedRelations = [];
+      if (typeof response !== "string" && response.toolCalls) {
+        const toolCall = response.toolCalls[0];
+        if (toolCall && toolCall.arguments) {
+          const args = JSON.parse(toolCall.arguments);
+          classifiedRelations = args.relations || [];
+        }
+      }
+
+      // Add metadata to original entities
+      return entities.map((entity, index) => {
+        const classified = classifiedRelations[index];
+        return {
+          ...entity,
+          metadata: { isPrivate: classified?.isPrivate || false }
+        };
+      });
+
+    } catch (error) {
+      logger.error(`Error checking privacy for relations: ${error}`);
+      // Default to public if error
+      return entities.map(entity => ({
+        ...entity,
+        metadata: { isPrivate: false }
+      }));
+    }
   }
 
   private _removeSpacesFromEntities(entityList: any[]) {

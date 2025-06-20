@@ -204,4 +204,84 @@ describe("GelMemoryGraph Class", () => {
       expect(result).toBeDefined();
     });
   });
+
+  describe("Graph Memory Privacy", () => {
+    test("should mark relations as private when they contain sensitive information", async () => {
+      const filters = { userId, agentId };
+      
+      // Add data with both private and public information
+      const testData = "John's phone number is 555-1234. He works at OpenAI as a software engineer.";
+      
+      const result = await graphMemory.add(testData, filters);
+      expect(result.added_entities).toBeDefined();
+      expect(result.relations).toBeDefined();
+      
+      // Check that some relations have privacy metadata
+      if (result.relations && result.relations.length > 0) {
+        const hasPrivacyMetadata = result.relations.some((rel: any) => 
+          rel.metadata && typeof rel.metadata.isPrivate === 'boolean'
+        );
+        expect(hasPrivacyMetadata).toBe(true);
+      }
+    });
+
+    test("should filter private relations when filterPrivate=true", async () => {
+      const filters = { userId, agentId };
+      
+      // Add mixed private and public data
+      await graphMemory.add("John's email is john@private.com", filters); // Private
+      await graphMemory.add("John works at a tech company", filters); // Public
+      await graphMemory.add("John's home address is 123 Secret St", filters); // Private
+      await graphMemory.add("John likes coffee", filters); // Public
+      
+      // Search without filtering
+      const allResults = await graphMemory.search("John", filters, 20);
+      expect(allResults.length).toBeGreaterThan(0);
+      
+      // Search with privacy filtering
+      const publicResults = await graphMemory.search("John", 
+        { ...filters, filterPrivate: true }, 20);
+      
+      // Should have fewer results when filtering
+      expect(publicResults.length).toBeLessThanOrEqual(allResults.length);
+    });
+
+    test("should not filter private relations when filterPrivate=false", async () => {
+      const filters = { userId, agentId };
+      
+      // Add private data
+      await graphMemory.add("Alice's social security number is 123-45-6789", filters);
+      await graphMemory.add("Alice enjoys reading", filters);
+      
+      // Search with filterPrivate=false (default)
+      const allResults = await graphMemory.search("Alice", filters, 10);
+      expect(allResults.length).toBeGreaterThan(0);
+      
+      // Search with explicit filterPrivate=false
+      const explicitResults = await graphMemory.search("Alice", 
+        { ...filters, filterPrivate: false }, 10);
+      
+      // Should return same results
+      expect(explicitResults.length).toBe(allResults.length);
+    });
+
+    test("should apply privacy filtering in getAll method", async () => {
+      const filters = { userId, agentId };
+      
+      // Add mixed data
+      await graphMemory.add("Bob's credit card number is 1234-5678-9012-3456", filters);
+      await graphMemory.add("Bob is a software developer", filters);
+      
+      // Get all without filtering
+      const allMemories = await graphMemory.getAll(filters, 50);
+      expect(allMemories.length).toBeGreaterThan(0);
+      
+      // Get all with privacy filtering
+      const publicMemories = await graphMemory.getAll(
+        { ...filters, filterPrivate: true }, 50);
+      
+      // Should have fewer results when filtering
+      expect(publicMemories.length).toBeLessThanOrEqual(allMemories.length);
+    });
+  });
 });

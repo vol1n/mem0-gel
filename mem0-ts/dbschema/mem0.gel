@@ -64,6 +64,7 @@ module mem0 {
         required created_at: datetime {
             default := datetime_current()
         }
+        optional metadata: json;
         optional updated_at: datetime;
     }
     

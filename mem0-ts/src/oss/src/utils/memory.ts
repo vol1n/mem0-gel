@@ -23,7 +23,7 @@ const parse_vision_messages = async (messages: Message[]) => {
   const parsed_messages = [];
   for (const message of messages) {
     let new_message = {
-      role: message.role,
+      ...message,
       content: "",
     };
     if (message.role !== "system") {

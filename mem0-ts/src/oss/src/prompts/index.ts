@@ -268,6 +268,31 @@ export function parseMessages(messages: string[]): string {
   return messages.join("\n");
 }
 
+export const IS_PRIVATE_FACT_PROMPT = `
+You are a memory privacy expert for social contexts. Your task is to review a batch of facts and decide for each one whether it must remain private or can be shared in social situations.
+
+Input:
+A JSON array of fact strings.
+
+Output:
+Return exactly one JSON array where each input fact is augmented with an "isPrivate" boolean:
+[
+  {
+    "fact": string,
+    "isPrivate": true|false
+  },
+  ...
+]
+
+Privacy Criteria (mark isPrivate = true if any apply):
+- Exposes PII: real name, email, phone number, home address.
+- Reveals sensitive personal details: intimate relationships, family matters, health or mental health status.
+- Discloses precise location data: current whereabouts, GPS coordinates.
+- Leaks private conversations or messages.
+- Reveals social preferences the user expects to keep private: political views, religious beliefs, sexual orientation.
+
+Otherwise (no sensitive personal data), mark isPrivate = false.`;
+
 export function removeCodeBlocks(text: string): string {
   return text.replace(/```[^`]*```/g, "");
 }

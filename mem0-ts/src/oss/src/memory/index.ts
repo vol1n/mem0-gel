@@ -19,7 +19,9 @@ import {
   getUpdateMemoryMessages,
   parseMessages,
   removeCodeBlocks,
+  IS_PRIVATE_FACT_PROMPT,
 } from "../prompts";
+import { CLASSIFY_FACT_PRIVACY_TOOL } from "../graphs/tools";
 import { DummyHistoryManager } from "../storage/DummyHistoryManager";
 import { Embedder } from "../embeddings/base";
 import { LLM } from "../llms/base";
@@ -183,7 +185,7 @@ export class Memory {
 
     const parsedMessages = Array.isArray(messages)
       ? (messages as Message[])
-      : [{ role: "user", content: messages }];
+      : [{ role: "user", content: messages, name: "I" }];
 
     const final_parsedMessages = await parse_vision_messages(parsedMessages);
 
@@ -200,7 +202,9 @@ export class Memory {
     if (this.graphMemory) {
       try {
         graphResult = await this.graphMemory.add(
-          final_parsedMessages.map((m) => m.content).join("\n"),
+          final_parsedMessages
+            .map((m) => `${m.name} said: ${m.content}`)
+            .join("\n"),
           filters,
         );
       } catch (error) {
@@ -266,6 +270,9 @@ export class Memory {
       facts = [];
     }
 
+    // Add privacy metadata to facts
+    const factPrivacyMap = await this.checkFactsPrivacy(facts);
+
     // Get embeddings for new facts
     const newMessageEmbeddings: Record<string, number[]> = {};
     const retrievedOldMemory: Array<{ id: string; text: string }> = [];
@@ -325,10 +332,14 @@ export class Memory {
       try {
         switch (action.event) {
           case "ADD": {
+            const factMetadata = {
+              ...metadata,
+              isPrivate: factPrivacyMap[action.text] || false,
+            };
             const memoryId = await this.createMemory(
               action.text,
               newMessageEmbeddings,
-              metadata,
+              factMetadata,
             );
             results.push({
               id: memoryId,
@@ -339,11 +350,15 @@ export class Memory {
           }
           case "UPDATE": {
             const realMemoryId = tempUuidMapping[action.id];
+            const factMetadata = {
+              ...metadata,
+              isPrivate: factPrivacyMap[action.text] || false,
+            };
             await this.updateMemory(
               realMemoryId,
               action.text,
               newMessageEmbeddings,
-              metadata,
+              factMetadata,
             );
             results.push({
               id: realMemoryId,
@@ -410,7 +425,6 @@ export class Memory {
         memoryItem.metadata![key] = value;
       }
     }
-
     return { ...memoryItem, ...filters };
   }
 
@@ -437,11 +451,16 @@ export class Memory {
 
     // Search vector store
     const queryEmbedding = await this.embedder.embed(query);
-    const memories = await this.vectorStore.search(
+    let memories = await this.vectorStore.search(
       queryEmbedding,
       limit,
       filters,
     );
+
+    // Filter out private memories if filterPrivate is true (default false)
+    if (filters.filterPrivate === true) {
+      memories = memories.filter(mem => !mem.payload.isPrivate);
+    }
 
     // Search graph store if available
     let graphResults;
@@ -632,7 +651,6 @@ export class Memory {
       hash: createHash("md5").update(data).digest("hex"),
       createdAt: new Date().toISOString(),
     };
-
     await this.vectorStore.insert([embedding], [memoryId], [memoryMetadata]);
     await this.db.addHistory(
       memoryId,
@@ -709,5 +727,41 @@ export class Memory {
     );
 
     return memoryId;
+  }
+
+  private async checkFactsPrivacy(facts: string[]): Promise<Record<string, boolean>> {
+    if (!facts.length) return {};
+
+    try {
+      const response = await this.llm.generateResponse(
+        [{ role: "user", content: `${IS_PRIVATE_FACT_PROMPT}\n\nFacts to classify: ${JSON.stringify(facts)}` }],
+        { type: "json_object" },
+        [CLASSIFY_FACT_PRIVACY_TOOL]
+      );
+
+      let classifiedFacts = [];
+      if (typeof response !== "string" && response.toolCalls) {
+        const toolCall = response.toolCalls[0];
+        if (toolCall && toolCall.arguments) {
+          const args = JSON.parse(toolCall.arguments);
+          classifiedFacts = args.facts || [];
+        }
+      }
+
+      // Create mapping from fact to isPrivate
+      const privacyMap: Record<string, boolean> = {};
+      classifiedFacts.forEach((item: any) => {
+        privacyMap[item.fact] = item.isPrivate || false;
+      });
+      return privacyMap;
+    } catch (error) {
+      console.error("Error checking facts privacy:", error);
+      // Default to public if error
+      const privacyMap: Record<string, boolean> = {};
+      facts.forEach(fact => {
+        privacyMap[fact] = false;
+      });
+      return privacyMap;
+    }
   }
 }

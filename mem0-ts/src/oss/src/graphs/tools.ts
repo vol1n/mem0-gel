@@ -265,3 +265,55 @@ export const DELETE_MEMORY_TOOL_GRAPH = {
     },
   },
 };
+
+export const CLASSIFY_PRIVACY_TOOL = {
+  type: "function",
+  function: {
+    name: "classify_privacy",
+    description: "Classify relationships as private or public",
+    parameters: {
+      type: "object",
+      properties: {
+        relations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              source: { type: "string" },
+              relation: { type: "string" },
+              target: { type: "string" },
+              isPrivate: { type: "boolean" }
+            },
+            required: ["source", "relation", "target", "isPrivate"]
+          }
+        }
+      },
+      required: ["relations"]
+    }
+  }
+};
+
+export const CLASSIFY_FACT_PRIVACY_TOOL = {
+  type: "function",
+  function: {
+    name: "classify_fact_privacy",
+    description: "Classify facts as private or public",
+    parameters: {
+      type: "object",
+      properties: {
+        facts: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              fact: { type: "string" },
+              isPrivate: { type: "boolean" }
+            },
+            required: ["fact", "isPrivate"]
+          }
+        }
+      },
+      required: ["facts"]
+    }
+  }
+};

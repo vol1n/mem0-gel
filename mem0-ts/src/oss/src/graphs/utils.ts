@@ -32,26 +32,65 @@ Output:
 Provide a list of update instructions, each specifying the source, target, and the new relationship to be set. Only include memories that require updates.
 `;
 
-export const EXTRACT_RELATIONS_PROMPT = `
-You are an advanced algorithm designed to extract structured information from text to construct knowledge graphs. Your goal is to capture comprehensive and accurate information. Follow these key principles:
+// export const EXTRACT_RELATIONS_PROMPT = `
+// You are an advanced algorithm designed to extract structured information from text to construct knowledge graphs. Your goal is to capture comprehensive and accurate information. Follow these key principles:
 
-1. Extract only explicitly stated information from the text.
-2. Establish relationships among the entities provided.
-3. Use "USER_ID" as the source entity for any self-references (e.g., "I," "me," "my," etc.) in user messages.
+// 1. Every message in the input text will begin with “{name} said.” Use this prefix to identify the speaker and determine how pronouns like “I,” “you,” “my,” etc., map to actual entities. Pronouns are not standalone entities unless explicitly mentioned otherwise.
+// 2. Extract only explicitly stated information from the text.
+// 3. Establish relationships among the entities provided.
+// 4. Use “USER_ID” as the source entity for any self-references (e.g., “I,” “me,” “my,” etc.) in user messages, after resolving pronouns via the “{name} said” prefix.
+
+// Relationships:
+//     - Use consistent, general, and timeless relationship types.
+//     - Example: Prefer “professor” over “became_professor.”
+//     - Relationships should only be established among the entities explicitly mentioned in the user message.
+
+// Entity Consistency:
+//     - Ensure that relationships are coherent and logically align with the context of the message.
+//     - Maintain consistent naming for entities across the extracted data.
+
+// Strive to construct a coherent and easily understandable knowledge graph by establishing all the relationships among the entities and adhering to the user’s context.
+
+// Adhere strictly to these guidelines to ensure high-quality knowledge graph extraction.
+// `;
+//
+export const EXTRACT_RELATIONS_PROMPT = `
+You are an advanced algorithm designed to extract structured information from text in order to build knowledge-graph triples. Follow these principles **exactly** to ensure high-quality extraction:
+
+──────────────────────────
+🔹 1. Message-Format Awareness
+──────────────────────────
+• **Every** message you receive begins with \`{name} said:\` (e.g. \`Mike said: …\`).
+• Treat the **name before “said:”** as the **current speaker**.
+• Pronoun resolution:
+  – “I / me / my” → the **speaker**
+  – “you / your” → the **addressee** (do **not** create an entity for “you”)
+• If the speaker is the human user, represent “I / me / my” as \`USER_ID\`.
+• Do **not** create triples such as \`Mike -- said -- ""\`; “said” is a framing token, *not* a relationship to extract.
+
+──────────────────────────
+🔹 2. Extraction Rules
+──────────────────────────
+1. Extract **only explicitly stated** facts from the message body (text after “said:”).
+2. Create triples **only among entities actually mentioned**.
+3. Use “USER_ID” **only** for self-references by the human user. All other names remain as-is.
+
+──────────────────────────
+🔹 3. Relationship Guidelines
+──────────────────────────
+• Relationships must be **consistent, general, and timeless**
+  – Prefer “professor” over “became_professor”.
+• Choose relationship names that logically align with the context.
+
+──────────────────────────
+🔹 4. Entity Consistency
+──────────────────────────
+• Maintain consistent naming for entities across triples.
+• Ensure relationships are coherent within the message context.
+
 CUSTOM_PROMPT
 
-Relationships:
-    - Use consistent, general, and timeless relationship types.
-    - Example: Prefer "professor" over "became_professor."
-    - Relationships should only be established among the entities explicitly mentioned in the user message.
-
-Entity Consistency:
-    - Ensure that relationships are coherent and logically align with the context of the message.
-    - Maintain consistent naming for entities across the extracted data.
-
-Strive to construct a coherent and easily understandable knowledge graph by eshtablishing all the relationships among the entities and adherence to the user's context.
-
-Adhere strictly to these guidelines to ensure high-quality knowledge graph extraction.
+Adhere strictly to these guidelines to construct a clear, accurate knowledge graph.
 `;
 
 export const DELETE_RELATIONS_SYSTEM_PROMPT = `
@@ -89,6 +128,43 @@ source -- relationship -- destination
 
 Provide a list of deletion instructions, each specifying the relationship to be deleted.
 `;
+
+export const IS_PRIVATE_PROMPT = `
+You are a graph memory privacy expert for social contexts. Your task is to review a batch of graph relationships and decide for each one whether it must remain private or can be shared.
+
+Input:
+A JSON array of relationship objects, each with:
+[
+  {
+    "source": string,
+    "relation": string,
+    "target": string
+  },
+  ...
+]
+
+Use “USER_ID” for any self-references.
+
+Output:
+Return exactly one JSON array where each input object is augmented with an “isPrivate” boolean:
+[
+  {
+    "source": string,
+    "relation": string,
+    "target": string,
+    "isPrivate": true|false
+  },
+  ...
+]
+
+Privacy Criteria (mark isPrivate = true if any apply):
+- Exposes PII: real name, email, phone number, home address.
+- Reveals sensitive personal details: intimate relationships, family matters, health or mental health status.
+- Discloses precise location data: current whereabouts, GPS coordinates.
+- Leaks private conversations or messages.
+- Reveals social preferences the user expects to keep private: political views, religious beliefs, sexual orientation.
+
+Otherwise (no sensitive personal data), mark isPrivate = false.`;
 
 export function getDeleteMessages(
   existingMemoriesString: string,
