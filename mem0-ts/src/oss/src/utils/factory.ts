@@ -24,8 +24,8 @@ import { SQLiteManager } from "../storage/SQLiteManager";
 import { MemoryHistoryManager } from "../storage/MemoryHistoryManager";
 import { SupabaseHistoryManager } from "../storage/SupabaseHistoryManager";
 import { HistoryManager } from "../storage/base";
-import { GoogleEmbedder } from "../embeddings/google";
-import { GoogleLLM } from "../llms/google";
+// import { GoogleEmbedder } from "../embeddings/google";
+// import { GoogleLLM } from "../llms/google";
 import { AzureOpenAILLM } from "../llms/azure";
 import { AzureOpenAIEmbedder } from "../embeddings/azure";
 import { LangchainLLM } from "../llms/langchain";
@@ -40,8 +40,8 @@ export class EmbedderFactory {
         return new OpenAIEmbedder(config);
       case "ollama":
         return new OllamaEmbedder(config);
-      case "google":
-        return new GoogleEmbedder(config);
+      // case "google":
+      //   return new GoogleEmbedder(config);
       case "azure_openai":
         return new AzureOpenAIEmbedder(config);
       case "langchain":
@@ -65,8 +65,8 @@ export class LLMFactory {
         return new GroqLLM(config);
       case "ollama":
         return new OllamaLLM(config);
-      case "google":
-        return new GoogleLLM(config);
+      // case "google":
+      //   return new GoogleLLM(config);
       case "azure_openai":
         return new AzureOpenAILLM(config);
       case "mistral":
