@@ -459,7 +459,7 @@ export class Memory {
 
     // Filter out private memories if filterPrivate is true (default false)
     if (filters.filterPrivate === true) {
-      memories = memories.filter(mem => !mem.payload.isPrivate);
+      memories = memories.filter((mem) => !mem.payload.isPrivate);
     }
 
     // Search graph store if available
@@ -729,14 +729,21 @@ export class Memory {
     return memoryId;
   }
 
-  private async checkFactsPrivacy(facts: string[]): Promise<Record<string, boolean>> {
+  private async checkFactsPrivacy(
+    facts: string[],
+  ): Promise<Record<string, boolean>> {
     if (!facts.length) return {};
 
     try {
       const response = await this.llm.generateResponse(
-        [{ role: "user", content: `${IS_PRIVATE_FACT_PROMPT}\n\nFacts to classify: ${JSON.stringify(facts)}` }],
+        [
+          {
+            role: "user",
+            content: `${IS_PRIVATE_FACT_PROMPT}\n\nFacts to classify: ${JSON.stringify(facts)}`,
+          },
+        ],
         { type: "json_object" },
-        [CLASSIFY_FACT_PRIVACY_TOOL]
+        [CLASSIFY_FACT_PRIVACY_TOOL],
       );
 
       let classifiedFacts = [];
@@ -758,7 +765,7 @@ export class Memory {
       console.error("Error checking facts privacy:", error);
       // Default to public if error
       const privacyMap: Record<string, boolean> = {};
-      facts.forEach(fact => {
+      facts.forEach((fact) => {
         privacyMap[fact] = false;
       });
       return privacyMap;

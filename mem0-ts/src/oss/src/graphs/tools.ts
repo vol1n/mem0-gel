@@ -282,15 +282,15 @@ export const CLASSIFY_PRIVACY_TOOL = {
               source: { type: "string" },
               relation: { type: "string" },
               target: { type: "string" },
-              isPrivate: { type: "boolean" }
+              isPrivate: { type: "boolean" },
             },
-            required: ["source", "relation", "target", "isPrivate"]
-          }
-        }
+            required: ["source", "relation", "target", "isPrivate"],
+          },
+        },
       },
-      required: ["relations"]
-    }
-  }
+      required: ["relations"],
+    },
+  },
 };
 
 export const CLASSIFY_FACT_PRIVACY_TOOL = {
@@ -307,13 +307,13 @@ export const CLASSIFY_FACT_PRIVACY_TOOL = {
             type: "object",
             properties: {
               fact: { type: "string" },
-              isPrivate: { type: "boolean" }
+              isPrivate: { type: "boolean" },
             },
-            required: ["fact", "isPrivate"]
-          }
-        }
+            required: ["fact", "isPrivate"],
+          },
+        },
       },
-      required: ["facts"]
-    }
-  }
+      required: ["facts"],
+    },
+  },
 };

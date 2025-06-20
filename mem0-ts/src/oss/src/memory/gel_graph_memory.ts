@@ -12,7 +12,11 @@ import {
   RELATIONS_TOOL,
   CLASSIFY_PRIVACY_TOOL,
 } from "../graphs/tools";
-import { EXTRACT_RELATIONS_PROMPT, getDeleteMessages, IS_PRIVATE_PROMPT } from "../graphs/utils";
+import {
+  EXTRACT_RELATIONS_PROMPT,
+  getDeleteMessages,
+  IS_PRIVATE_PROMPT,
+} from "../graphs/utils";
 import { logger } from "../utils/logger";
 
 interface SearchOutput {
@@ -309,9 +313,10 @@ export class GelMemoryGraph {
     }
 
     // Filter out private relations if filterPrivate is true (default false)
-    const filteredOutput = filters.filterPrivate === true 
-      ? searchOutput.filter(item => !item.metadata?.isPrivate)
-      : searchOutput;
+    const filteredOutput =
+      filters.filterPrivate === true
+        ? searchOutput.filter((item) => !item.metadata?.isPrivate)
+        : searchOutput;
 
     const searchOutputsSequence = filteredOutput.map((item) => [
       item.source,
@@ -387,7 +392,7 @@ export class GelMemoryGraph {
         if (filters.filterPrivate === true && relation.metadata?.isPrivate) {
           continue;
         }
-        
+
         finalResults.push({
           source: entity.name,
           relationship: relation.relationship_type,
@@ -497,10 +502,10 @@ export class GelMemoryGraph {
     }
 
     entities = this._removeSpacesFromEntities(entities);
-    
+
     // Add privacy metadata to each relation using IS_PRIVATE_PROMPT
     const entitiesWithPrivacy = await this._checkRelationsPrivacy(entities);
-    
+
     logger.debug(`Extracted entities: ${JSON.stringify(entitiesWithPrivacy)}`);
     return entitiesWithPrivacy;
   }
@@ -835,16 +840,21 @@ export class GelMemoryGraph {
 
     try {
       // Format entities for IS_PRIVATE_PROMPT
-      const relationObjects = entities.map(entity => ({
+      const relationObjects = entities.map((entity) => ({
         source: entity.source,
         relation: entity.relationship,
         target: entity.destination,
       }));
 
       const response = await this.structuredLlm.generateResponse(
-        [{ role: "user", content: `${IS_PRIVATE_PROMPT}\n\nRelations to classify: ${JSON.stringify(relationObjects)}` }],
+        [
+          {
+            role: "user",
+            content: `${IS_PRIVATE_PROMPT}\n\nRelations to classify: ${JSON.stringify(relationObjects)}`,
+          },
+        ],
         { type: "json_object" },
-        [CLASSIFY_PRIVACY_TOOL]
+        [CLASSIFY_PRIVACY_TOOL],
       );
 
       let classifiedRelations = [];
@@ -861,16 +871,15 @@ export class GelMemoryGraph {
         const classified = classifiedRelations[index];
         return {
           ...entity,
-          metadata: { isPrivate: classified?.isPrivate || false }
+          metadata: { isPrivate: classified?.isPrivate || false },
         };
       });
-
     } catch (error) {
       logger.error(`Error checking privacy for relations: ${error}`);
       // Default to public if error
-      return entities.map(entity => ({
+      return entities.map((entity) => ({
         ...entity,
-        metadata: { isPrivate: false }
+        metadata: { isPrivate: false },
       }));
     }
   }
