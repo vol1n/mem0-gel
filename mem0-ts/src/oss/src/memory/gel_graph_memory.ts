@@ -460,40 +460,64 @@ export class GelMemoryGraph {
   ) {
     let messages;
     if (this.config.graphStore?.customPrompt) {
+      const systemContent =
+        EXTRACT_RELATIONS_PROMPT.replace("USER_ID", filters["userId"]).replace(
+          "CUSTOM_PROMPT",
+          `4. ${this.config.graphStore.customPrompt}`,
+        ) + "\nPlease provide your response in JSON format.";
+
       messages = [
         {
           role: "system",
-          content:
-            EXTRACT_RELATIONS_PROMPT.replace(
-              "USER_ID",
-              filters["userId"],
-            ).replace(
-              "CUSTOM_PROMPT",
-              `4. ${this.config.graphStore.customPrompt}`,
-            ) + "\nPlease provide your response in JSON format.",
+          content: systemContent,
         },
         { role: "user", content: data },
       ];
+
+      console.log(
+        "🔍 [GRAPH EXTRACT] Custom prompt - System message:",
+        systemContent,
+      );
+      console.log("🔍 [GRAPH EXTRACT] Custom prompt - User message:", data);
     } else {
+      const systemContent =
+        EXTRACT_RELATIONS_PROMPT.replace("USER_ID", filters["userId"]) +
+        "\nPlease provide your response in JSON format.";
+      const userContent = `List of entities: ${Object.keys(entityTypeMap)}. \n\nText: ${data}`;
+
       messages = [
         {
           role: "system",
-          content:
-            EXTRACT_RELATIONS_PROMPT.replace("USER_ID", filters["userId"]) +
-            "\nPlease provide your response in JSON format.",
+          content: systemContent,
         },
         {
           role: "user",
-          content: `List of entities: ${Object.keys(entityTypeMap)}. \n\nText: ${data}`,
+          content: userContent,
         },
       ];
+
+      console.log(
+        "🔍 [GRAPH EXTRACT] Default prompt - System message:",
+        systemContent,
+      );
+      console.log(
+        "🔍 [GRAPH EXTRACT] Default prompt - User message:",
+        userContent,
+      );
     }
 
     const tools = [RELATIONS_TOOL] as Tool[];
+    console.log("🔍 [GRAPH EXTRACT] Tools being used:", tools);
+
     const extractedEntities = await this.structuredLlm.generateResponse(
       messages,
       { type: "json_object" },
       tools,
+    );
+
+    console.log(
+      "🤖 [GRAPH EXTRACT] Raw LLM Response:",
+      JSON.stringify(extractedEntities, null, 2),
     );
 
     let entities: any[] = [];
@@ -628,6 +652,13 @@ export class GelMemoryGraph {
       filters["userId"],
     );
 
+    console.log("🔍 [GRAPH DELETE] System message:", systemPrompt);
+    console.log("🔍 [GRAPH DELETE] User message:", userPrompt);
+    console.log(
+      "🔍 [GRAPH DELETE] Existing relations being considered:",
+      searchOutputString,
+    );
+
     const tools = [DELETE_MEMORY_TOOL_GRAPH] as Tool[];
     const memoryUpdates = await this.structuredLlm.generateResponse(
       [
@@ -636,6 +667,11 @@ export class GelMemoryGraph {
       ],
       { type: "json_object" },
       tools,
+    );
+
+    console.log(
+      "🤖 [GRAPH DELETE] Raw LLM Response:",
+      JSON.stringify(memoryUpdates, null, 2),
     );
 
     const toBeDeleted: any[] = [];
