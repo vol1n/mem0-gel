@@ -72,6 +72,7 @@ export interface GraphStoreConfig {
   config: Neo4jConfig | GelGraphConfig;
   llm?: LLMConfig;
   customPrompt?: string;
+  customDeletePrompt?: string;
 }
 
 export interface MemoryConfig {
@@ -193,6 +194,7 @@ export const MemoryConfigSchema = z.object({
         })
         .optional(),
       customPrompt: z.string().optional(),
+      customDeletePrompt: z.string().optional(),
     })
     .optional(),
   historyStore: z

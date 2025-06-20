@@ -646,11 +646,26 @@ export class GelMemoryGraph {
       )
       .join("\n");
 
-    const [systemPrompt, userPrompt] = getDeleteMessages(
-      searchOutputString,
-      data,
-      filters["userId"],
-    );
+    let systemPrompt: string;
+    let userPrompt: string;
+
+    if (this.config.graphStore?.customDeletePrompt) {
+      // Use custom delete prompt
+      systemPrompt = this.config.graphStore.customDeletePrompt.replace(
+        "USER_ID",
+        filters["userId"],
+      );
+      userPrompt = `Here are the existing memories: ${searchOutputString} \n\n New Information: ${data}`;
+      console.log("🔍 [GRAPH DELETE] Using CUSTOM delete prompt");
+    } else {
+      // Use default delete prompt
+      [systemPrompt, userPrompt] = getDeleteMessages(
+        searchOutputString,
+        data,
+        filters["userId"],
+      );
+      console.log("🔍 [GRAPH DELETE] Using DEFAULT delete prompt");
+    }
 
     console.log("🔍 [GRAPH DELETE] System message:", systemPrompt);
     console.log("🔍 [GRAPH DELETE] User message:", userPrompt);
