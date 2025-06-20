@@ -19,36 +19,41 @@ export class OpenAILLM implements LLM {
     responseFormat?: { type: string },
     tools?: any[],
   ): Promise<string | LLMResponse> {
-    const completion = await this.openai.chat.completions.create({
-      messages: messages.map((msg) => {
-        const role = msg.role as "system" | "user" | "assistant";
+    try {
+      const completion = await this.openai.chat.completions.create({
+        messages: messages.map((msg) => {
+          const role = msg.role as "system" | "user" | "assistant";
+          return {
+            role,
+            content:
+              typeof msg.content === "string"
+                ? msg.content
+                : JSON.stringify(msg.content),
+          };
+        }),
+        model: this.model,
+        response_format: responseFormat as { type: "text" | "json_object" },
+        ...(tools && { tools, tool_choice: "auto" }),
+      });
+
+      const response = completion.choices[0].message;
+
+      if (response.tool_calls) {
         return {
-          role,
-          content:
-            typeof msg.content === "string"
-              ? msg.content
-              : JSON.stringify(msg.content),
+          content: response.content || "",
+          role: response.role,
+          toolCalls: response.tool_calls.map((call) => ({
+            name: call.function.name,
+            arguments: call.function.arguments,
+          })),
         };
-      }),
-      model: this.model,
-      response_format: responseFormat as { type: "text" | "json_object" },
-      ...(tools && { tools, tool_choice: "auto" }),
-    });
+      }
 
-    const response = completion.choices[0].message;
-
-    if (response.tool_calls) {
-      return {
-        content: response.content || "",
-        role: response.role,
-        toolCalls: response.tool_calls.map((call) => ({
-          name: call.function.name,
-          arguments: call.function.arguments,
-        })),
-      };
+      return response.content || "";
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      throw new Error(`OpenAI API request failed: ${err.message}`);
     }
-
-    return response.content || "";
   }
 
   async generateChat(messages: Message[]): Promise<LLMResponse> {

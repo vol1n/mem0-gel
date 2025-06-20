@@ -473,12 +473,6 @@ export class GelMemoryGraph {
         },
         { role: "user", content: data },
       ];
-
-      console.log(
-        "🔍 [GRAPH EXTRACT] Custom prompt - System message:",
-        systemContent,
-      );
-      console.log("🔍 [GRAPH EXTRACT] Custom prompt - User message:", data);
     } else {
       const systemContent =
         EXTRACT_RELATIONS_PROMPT.replace("USER_ID", filters["userId"]) +
@@ -495,29 +489,13 @@ export class GelMemoryGraph {
           content: userContent,
         },
       ];
-
-      console.log(
-        "🔍 [GRAPH EXTRACT] Default prompt - System message:",
-        systemContent,
-      );
-      console.log(
-        "🔍 [GRAPH EXTRACT] Default prompt - User message:",
-        userContent,
-      );
     }
 
     const tools = [RELATIONS_TOOL] as Tool[];
-    console.log("🔍 [GRAPH EXTRACT] Tools being used:", tools);
-
     const extractedEntities = await this.structuredLlm.generateResponse(
       messages,
       { type: "json_object" },
       tools,
-    );
-
-    console.log(
-      "🤖 [GRAPH EXTRACT] Raw LLM Response:",
-      JSON.stringify(extractedEntities, null, 2),
     );
 
     let entities: any[] = [];
@@ -656,7 +634,6 @@ export class GelMemoryGraph {
         filters["userId"],
       );
       userPrompt = `Here are the existing memories: ${searchOutputString} \n\n New Information: ${data}`;
-      console.log("🔍 [GRAPH DELETE] Using CUSTOM delete prompt");
     } else {
       // Use default delete prompt
       [systemPrompt, userPrompt] = getDeleteMessages(
@@ -664,15 +641,7 @@ export class GelMemoryGraph {
         data,
         filters["userId"],
       );
-      console.log("🔍 [GRAPH DELETE] Using DEFAULT delete prompt");
     }
-
-    console.log("🔍 [GRAPH DELETE] System message:", systemPrompt);
-    console.log("🔍 [GRAPH DELETE] User message:", userPrompt);
-    console.log(
-      "🔍 [GRAPH DELETE] Existing relations being considered:",
-      searchOutputString,
-    );
 
     const tools = [DELETE_MEMORY_TOOL_GRAPH] as Tool[];
     const memoryUpdates = await this.structuredLlm.generateResponse(
@@ -682,11 +651,6 @@ export class GelMemoryGraph {
       ],
       { type: "json_object" },
       tools,
-    );
-
-    console.log(
-      "🤖 [GRAPH DELETE] Raw LLM Response:",
-      JSON.stringify(memoryUpdates, null, 2),
     );
 
     const toBeDeleted: any[] = [];
