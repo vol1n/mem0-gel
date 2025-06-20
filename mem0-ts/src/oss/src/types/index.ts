@@ -166,11 +166,26 @@ export const MemoryConfigSchema = z.object({
   graphStore: z
     .object({
       provider: z.string(),
-      config: z.object({
-        url: z.string(),
-        username: z.string(),
-        password: z.string(),
-      }),
+      config: z.union([
+        z.object({
+          url: z.string(),
+          username: z.string(),
+          password: z.string(),
+        }),
+        z.object({
+          dimension: z.number(),
+          client: z.any().optional(),
+          dsn: z.string().optional(),
+          host: z.string().optional(),
+          port: z.number().optional(),
+          database: z.string().optional(),
+          user: z.string().optional(),
+          password: z.string().optional(),
+          tlsCaFile: z.string().optional(),
+          tlsSecurity: z.string().optional(),
+          collectionName: z.string().optional(),
+        }),
+      ]),
       llm: z
         .object({
           provider: z.string(),
