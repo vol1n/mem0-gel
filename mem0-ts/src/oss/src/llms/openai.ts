@@ -23,12 +23,25 @@ export class OpenAILLM implements LLM {
       const completion = await this.openai.chat.completions.create({
         messages: messages.map((msg) => {
           const role = msg.role as "system" | "user" | "assistant";
+
+          // Transform content to OpenAI format
+          let content;
+          if (typeof msg.content === "string") {
+            // Text only - pass as string
+            content = msg.content;
+          } else {
+            // Image content - transform to OpenAI array format
+            content = [
+              {
+                type: "image_url",
+                image_url: msg.content.image_url,
+              },
+            ];
+          }
+
           return {
             role,
-            content:
-              typeof msg.content === "string"
-                ? msg.content
-                : JSON.stringify(msg.content),
+            content,
           };
         }),
         model: this.model,
