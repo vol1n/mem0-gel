@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { LLM, LLMResponse } from "./base";
 import { LLMConfig, Message } from "../types";
 
@@ -26,30 +27,34 @@ export class OpenAILLM implements LLM {
     console.log("📝 [LLM CALL] Tools:", JSON.stringify(tools, null, 2));
 
     try {
-      const completion = await this.openai.chat.completions.create({
-        messages: messages.map((msg) => {
-          const role = msg.role as "system" | "user" | "assistant";
-
+      const openaiMessages: ChatCompletionMessageParam[] = messages.map(
+        (msg) => {
           // Transform content to OpenAI format
-          let content;
           if (typeof msg.content === "string") {
-            // Text only - pass as string
-            content = msg.content;
+            // Text only
+            return {
+              role: msg.role as "system" | "user" | "assistant",
+              content: msg.content,
+            };
           } else {
-            // Image content - transform to OpenAI array format
-            content = [
-              {
-                type: "image_url",
-                image_url: msg.content.image_url,
-              },
-            ];
+            // Image content - only user messages can have multimodal content
+            return {
+              role: "user" as const,
+              content: [
+                {
+                  type: "image_url" as const,
+                  image_url: {
+                    url: msg.content.image_url.url,
+                  },
+                },
+              ],
+            };
           }
+        },
+      );
 
-          return {
-            role,
-            content,
-          };
-        }),
+      const completion = await this.openai.chat.completions.create({
+        messages: openaiMessages,
         model: this.model,
         response_format: responseFormat as { type: "text" | "json_object" },
         ...(tools && { tools, tool_choice: "auto" }),
