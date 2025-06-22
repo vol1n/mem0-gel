@@ -312,6 +312,10 @@ export class Gel implements VectorStore {
         filterConditions.push(".role = <optional str>$role");
         queryParams.role = filters.role;
       }
+      if (filters.maxDistance) {
+        filterConditions.push(".distance <= <float32>$max_distance");
+        queryParams.max_distance = filters.maxDistance;
+      }
     }
 
     const filterClause =
@@ -319,7 +323,6 @@ export class Gel implements VectorStore {
         ? `FILTER ${filterConditions.join(" AND ")}`
         : "";
 
-    // Use Gel's ext::ai vector similarity search
     const searchQuery = `
       SELECT ${this.fullyQualifiedType} {
         mem0_id,
@@ -353,6 +356,7 @@ export class Gel implements VectorStore {
       actor_id: string | null;
       role: string | null;
       memory_type: string | null;
+      distance: number;
       metadata: any;
     }>(searchQuery, queryParams);
 
@@ -378,7 +382,7 @@ export class Gel implements VectorStore {
       return {
         id: result.mem0_id,
         payload: payload,
-        score: 1.0, // Gel doesn't return distance directly, would need to calculate
+        score: result.distance,
       };
     });
   }
