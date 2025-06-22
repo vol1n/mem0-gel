@@ -315,7 +315,7 @@ export class GelMemoryGraph {
     // Filter out private relations if filterPrivate is true (default false)
     const filteredOutput =
       filters.filterPrivate === true
-        ? searchOutput.filter((item) => !item.metadata?.isPrivate)
+        ? searchOutput.filter((item) => !item.metadata.isPrivate)
         : searchOutput;
 
     const searchOutputsSequence = filteredOutput.map((item) => [
@@ -556,14 +556,15 @@ export class GelMemoryGraph {
           out_relations := .<source[is ${this.collectionName}GraphRelation] {
             id,
             relationship_type,
-            target: { id, name }
+            target: { id, name },
+            metadata
           },
           in_relations := .<target[is ${this.collectionName}GraphRelation] {
             id,
             relationship_type,
-            source: { id, name }
-          },
-          metadata
+            source: { id, name },
+            metadata
+          }
         }
         filter .cosine_similarity >= <float32>$threshold
         order by .cosine_similarity desc
@@ -588,6 +589,7 @@ export class GelMemoryGraph {
             destination: relation.target.name,
             destination_id: relation.target.id,
             similarity: entity.cosine_similarity,
+            metadata: relation.metadata,
           });
         }
 
@@ -601,6 +603,7 @@ export class GelMemoryGraph {
             destination: entity.name,
             destination_id: entity.id,
             similarity: entity.cosine_similarity,
+            metadata: relation.metadata,
           });
         }
       }
