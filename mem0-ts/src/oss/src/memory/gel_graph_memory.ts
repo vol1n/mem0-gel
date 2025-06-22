@@ -1,7 +1,6 @@
 import { createClient } from "gel";
 import type { Client } from "gel";
 import { BM25 } from "../utils/bm25";
-import { GraphStoreConfig } from "../graphs/configs";
 import type { MemoryConfig, GelGraphConfig, GraphRelation } from "../types";
 import { EmbedderFactory, LLMFactory } from "../utils/factory";
 import { Embedder } from "../embeddings/base";
@@ -27,15 +26,12 @@ interface SearchOutput {
   destination: string;
   destination_id: string;
   similarity: number;
+  metadata?: Record<string, any>;
 }
 
 interface ToolCall {
   name: string;
   arguments: string;
-}
-
-interface LLMResponse {
-  toolCalls?: ToolCall[];
 }
 
 interface Tool {
@@ -566,7 +562,8 @@ export class GelMemoryGraph {
             id,
             relationship_type,
             source: { id, name }
-          }
+          },
+          metadata
         }
         filter .cosine_similarity >= <float32>$threshold
         order by .cosine_similarity desc

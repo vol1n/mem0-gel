@@ -20,12 +20,6 @@ export class OpenAILLM implements LLM {
     responseFormat?: { type: string },
     tools?: any[],
   ): Promise<string | LLMResponse> {
-    console.log("🔍 [LLM CALL] Full request details:");
-    console.log("📝 [LLM CALL] Model:", this.model);
-    console.log("📝 [LLM CALL] Messages:", JSON.stringify(messages, null, 2));
-    console.log("📝 [LLM CALL] Response Format:", responseFormat);
-    console.log("📝 [LLM CALL] Tools:", JSON.stringify(tools, null, 2));
-
     try {
       const openaiMessages: ChatCompletionMessageParam[] = messages.map(
         (msg) => {
@@ -62,10 +56,7 @@ export class OpenAILLM implements LLM {
 
       const response = completion.choices[0].message;
 
-      console.log(
-        "🤖 [LLM RESPONSE] Raw OpenAI response:",
-        JSON.stringify(response, null, 2),
-      );
+      console.log(JSON.stringify(response, null, 2));
 
       if (response.tool_calls) {
         const result = {
@@ -76,14 +67,9 @@ export class OpenAILLM implements LLM {
             arguments: call.function.arguments,
           })),
         };
-        console.log(
-          "🤖 [LLM RESPONSE] Formatted tool response:",
-          JSON.stringify(result, null, 2),
-        );
+        console.log(JSON.stringify(result, null, 2));
         return result;
       }
-
-      console.log("🤖 [LLM RESPONSE] Text response:", response.content);
       return response.content || "";
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
