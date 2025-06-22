@@ -56,8 +56,6 @@ export class OpenAILLM implements LLM {
 
       const response = completion.choices[0].message;
 
-      console.log(JSON.stringify(response, null, 2));
-
       if (response.tool_calls) {
         const result = {
           content: response.content || "",
@@ -67,7 +65,6 @@ export class OpenAILLM implements LLM {
             arguments: call.function.arguments,
           })),
         };
-        console.log(JSON.stringify(result, null, 2));
         return result;
       }
       return response.content || "";

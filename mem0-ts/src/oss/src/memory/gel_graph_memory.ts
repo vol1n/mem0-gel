@@ -55,6 +55,7 @@ export class GelMemoryGraph {
   private embeddingModel: Embedder;
   private llm: LLM;
   private structuredLlm: LLM;
+  private fastLlm: LLM;
   private llmProvider: string;
   private threshold: number;
   private collectionName: string;
@@ -94,6 +95,13 @@ export class GelMemoryGraph {
       "openai_structured",
       this.config.llm.config,
     );
+
+    // Fast LLM for entity extraction in search pipeline
+    this.fastLlm = LLMFactory.create("openai_structured", {
+      ...this.config.llm.config,
+      model: "gpt-4.1-mini-2025-04-14",
+    });
+
     this.threshold = 0.7;
 
     // Initialize and validate schema
@@ -315,7 +323,7 @@ export class GelMemoryGraph {
     // Filter out private relations if filterPrivate is true (default false)
     const filteredOutput =
       filters.filterPrivate === true
-        ? searchOutput.filter((item) => !item.metadata.isPrivate)
+        ? searchOutput.filter((item) => !item.metadata?.isPrivate)
         : searchOutput;
 
     const searchOutputsSequence = filteredOutput.map((item) => [
@@ -410,7 +418,7 @@ export class GelMemoryGraph {
     filters: Record<string, any>,
   ) {
     const tools = [EXTRACT_ENTITIES_TOOL] as Tool[];
-    const searchResults = await this.structuredLlm.generateResponse(
+    const searchResults = await this.fastLlm.generateResponse(
       [
         {
           role: "system",
@@ -517,22 +525,29 @@ export class GelMemoryGraph {
     filters: Record<string, any>,
     limit = 100,
   ): Promise<SearchOutput[]> {
-    const resultRelations: SearchOutput[] = [];
-
-    for (const node of nodeList) {
-      let nEmbedding: number[];
+    // Parallelize embedding generation for all nodes
+    const embeddingPromises = nodeList.map(async (node) => {
       try {
         // Add 30 second timeout for embedding requests
-        nEmbedding = await Promise.race([
+        const nEmbedding = await Promise.race([
           this.embeddingModel.embed(node),
           new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error("Embedding timeout")), 10000),
           ),
         ]);
+        return { node, nEmbedding };
       } catch (error) {
-        continue; // Skip this node and continue with the next one
+        return null; // Skip failed embeddings
       }
+    });
 
+    const embeddings = (await Promise.all(embeddingPromises)).filter(
+      (result): result is { node: string; nEmbedding: number[] } =>
+        result !== null,
+    );
+
+    // Parallelize database queries for all embeddings
+    const queryPromises = embeddings.map(async ({ node, nEmbedding }) => {
       // EdgeQL query for similarity search with relationships
       const query = `
         with 
@@ -571,41 +586,51 @@ export class GelMemoryGraph {
         limit <int64>$limit
       `;
 
-      const result = await this.client.query(query, {
-        n_embedding: nEmbedding,
-        threshold: this.threshold,
-        user_id: filters["userId"],
-        limit: limit,
-      });
+      try {
+        const result = await this.client.query(query, {
+          n_embedding: nEmbedding,
+          threshold: this.threshold,
+          user_id: filters["userId"],
+          limit: limit,
+        });
+        return result as any[];
+      } catch (error) {
+        console.error(`Error querying for node ${node}:`, error);
+        return [];
+      }
+    });
 
+    const allResults = await Promise.all(queryPromises);
+    const resultRelations: SearchOutput[] = [];
+
+    // Process all results
+    for (const result of allResults.flat()) {
       // Process outgoing relationships
-      for (const entity of result as any[]) {
-        for (const relation of entity.out_relations || []) {
-          resultRelations.push({
-            source: entity.name,
-            source_id: entity.id,
-            relationship: relation.relationship_type,
-            relation_id: relation.id,
-            destination: relation.target.name,
-            destination_id: relation.target.id,
-            similarity: entity.cosine_similarity,
-            metadata: relation.metadata,
-          });
-        }
+      for (const relation of result.out_relations || []) {
+        resultRelations.push({
+          source: result.name,
+          source_id: result.id,
+          relationship: relation.relationship_type,
+          relation_id: relation.id,
+          destination: relation.target.name,
+          destination_id: relation.target.id,
+          similarity: result.cosine_similarity,
+          metadata: relation.metadata || {},
+        });
+      }
 
-        // Process incoming relationships
-        for (const relation of entity.in_relations || []) {
-          resultRelations.push({
-            source: relation.source.name,
-            source_id: relation.source.id,
-            relationship: relation.relationship_type,
-            relation_id: relation.id,
-            destination: entity.name,
-            destination_id: entity.id,
-            similarity: entity.cosine_similarity,
-            metadata: relation.metadata,
-          });
-        }
+      // Process incoming relationships
+      for (const relation of result.in_relations || []) {
+        resultRelations.push({
+          source: relation.source.name,
+          source_id: relation.source.id,
+          relationship: relation.relationship_type,
+          relation_id: relation.id,
+          destination: result.name,
+          destination_id: result.id,
+          similarity: result.cosine_similarity,
+          metadata: relation.metadata || {},
+        });
       }
     }
 

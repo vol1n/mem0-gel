@@ -449,28 +449,22 @@ export class Memory {
       );
     }
 
-    // Search vector store
+    // Search vector store and graph store in parallel
     const queryEmbedding = await this.embedder.embed(query);
-    let memories = await this.vectorStore.search(
-      queryEmbedding,
-      limit,
-      filters,
-    );
+
+    const [memories, graphResults] = await Promise.all([
+      this.vectorStore.search(queryEmbedding, limit, filters),
+      this.graphMemory?.search(query, filters).catch((error) => {
+        console.error("Error searching graph memory:", error);
+        return undefined;
+      }) || Promise.resolve(undefined),
+    ]);
 
     // Filter out private memories if filterPrivate is true (default false)
-    if (filters.filterPrivate === true) {
-      memories = memories.filter((mem) => !mem.payload.isPrivate);
-    }
-
-    // Search graph store if available
-    let graphResults;
-    if (this.graphMemory) {
-      try {
-        graphResults = await this.graphMemory.search(query, filters);
-      } catch (error) {
-        console.error("Error searching graph memory:", error);
-      }
-    }
+    const filteredMemories =
+      filters.filterPrivate === true
+        ? memories.filter((mem) => !mem.payload.isPrivate)
+        : memories;
 
     const excludedKeys = new Set([
       "userId",
@@ -481,7 +475,7 @@ export class Memory {
       "createdAt",
       "updatedAt",
     ]);
-    const results = memories.map((mem) => ({
+    const results = filteredMemories.map((mem) => ({
       id: mem.id,
       memory: mem.payload.data,
       hash: mem.payload.hash,
